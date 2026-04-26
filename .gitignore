@@ -1,0 +1,89 @@
+# ============================
+# Maven
+# ============================
+**/target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/MavenWrapperDownloader.java
+
+# ============================
+# Java / JVM
+# ============================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# ============================
+# IDE — IntelliJ IDEA
+# ============================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ============================
+# IDE — Eclipse
+# ============================
+.classpath
+.project
+.settings/
+bin/
+
+# ============================
+# IDE — VS Code
+# ============================
+.vscode/
+
+# ============================
+# IDE — NetBeans
+# ============================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ============================
+# OS generated
+# ============================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ============================
+# Logs
+# ============================
+*.log
+logs/
+
+# ============================
+# Docker (volumes & env)
+# ============================
+docker-compose.override.yml
+.env
+
+# ============================
+# Misc
+# ============================
+*.swp
+*.swo
+*~
