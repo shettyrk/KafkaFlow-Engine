@@ -3,155 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kafka Order Flow</title>
+    <meta name="description" content="KafkaFlow Engine — Real-time event-driven order processing dashboard built with Spring Boot and Apache Kafka">
+    <title>KafkaFlow Engine — Live Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+<canvas id="particleBg" aria-hidden="true"></canvas>
+
 <main class="app-shell">
     <header class="topbar">
-        <div>
-            <p class="eyebrow">Spring Boot + Kafka</p>
-            <h1>Order Flow Console</h1>
+        <div class="topbar-left">
+            <div class="logo-mark">
+                <svg viewBox="0 0 32 32" fill="none" width="32" height="32">
+                    <rect width="32" height="32" rx="8" fill="url(#logoGrd)"/>
+                    <path d="M10 22V10l6 4-6 4zm6-4l6 4V10l-6 4z" fill="white" opacity=".9"/>
+                    <defs><linearGradient id="logoGrd" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+                </svg>
+            </div>
+            <div>
+                <p class="eyebrow">Spring Boot + Apache Kafka</p>
+                <h1>KafkaFlow Engine</h1>
+            </div>
         </div>
-        <div class="status-pill" id="apiStatus">
-            <span class="pulse"></span>
-            <span id="apiStatusText">Checking API</span>
+        <div class="topbar-right">
+            <div class="speed-control" id="speedControl">
+                <label for="speedSlider">
+                    <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9V9h2v4zm0-6H9V5h2v2z"/></svg>
+                    Speed
+                </label>
+                <input type="range" id="speedSlider" min="1" max="5" value="2" step="1">
+                <span class="speed-label" id="speedLabel">Slow</span>
+            </div>
+            <div class="status-pill" id="apiStatus">
+                <span class="pulse"></span>
+                <span id="apiStatusText">Checking API…</span>
+            </div>
         </div>
     </header>
 
     <section class="workspace">
-        <section class="flow-panel" aria-label="Kafka event flow">
+        <section class="flow-panel" aria-label="Kafka event flow visualization">
             <div class="flow-toolbar">
                 <div>
-                    <h2>Live Message Path</h2>
-                    <p id="activeOrder">No active order</p>
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm2 4a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm4 4a1 1 0 011-1h4a1 1 0 110 2h-4a1 1 0 01-1-1z"/></svg>
+                        Live Message Path
+                    </h2>
+                    <p id="activeOrder">Waiting for order…</p>
                 </div>
-                <button class="icon-button" id="replayButton" type="button" title="Replay last flow" aria-label="Replay last flow">
-                    <span aria-hidden="true">R</span>
-                </button>
+                <div class="flow-actions">
+                    <button class="ghost-button" id="replayButton" type="button" title="Replay last flow" aria-label="Replay last flow">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/></svg>
+                        Replay
+                    </button>
+                </div>
             </div>
 
             <div class="flow-board" id="flowBoard">
-                <svg class="flow-lines" viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M95 115 L270 115"/>
-                    <path d="M355 115 L500 115"/>
-                    <path d="M590 115 L760 80"/>
-                    <path d="M590 115 L760 200"/>
-                    <path d="M850 80 L910 135"/>
-                    <path d="M850 200 L910 255"/>
-                    <path d="M935 135 L790 350"/>
-                    <path d="M935 255 L790 350"/>
-                    <path d="M145 320 L335 350"/>
-                    <path d="M480 320 L650 350"/>
-                    <path d="M790 350 L790 500"/>
-                    <path d="M790 500 L615 500"/>
-                    <path d="M615 500 L430 500"/>
-                </svg>
+                <svg class="flow-lines" id="flowSvg" aria-hidden="true"></svg>
 
+                <!-- Row 1: Entry -->
                 <div class="node node-client" data-node="client">
-                    <span class="node-kind">REST</span>
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <span class="node-kind">REST Client</span>
                     <strong>User</strong>
                     <small>POST /orders</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-api" data-node="order-api">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>
+                    </div>
                     <span class="node-kind">Service</span>
                     <strong>Order</strong>
-                    <small>CREATED -> PROCESSING</small>
+                    <small>CREATED → PROCESSING</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-topic order" data-node="order-topic">
-                    <span class="node-kind">Topic</span>
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <span class="node-kind">Kafka Topic</span>
                     <strong>order-topic</strong>
                     <small>order_created</small>
+                    <div class="node-glow"></div>
                 </div>
+
+                <!-- Row 2: Parallel processing -->
                 <div class="node node-payment" data-node="payment-service">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+                    </div>
                     <span class="node-kind">Service</span>
                     <strong>Payment</strong>
-                    <small>payment_success / failed</small>
+                    <small>success / failed</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-inventory" data-node="inventory-service">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    </div>
                     <span class="node-kind">Service</span>
                     <strong>Inventory</strong>
                     <small>inventory_updated</small>
+                    <div class="node-glow"></div>
                 </div>
+
+                <!-- Row 2: Result topics -->
                 <div class="node node-topic payment-topic" data-node="payment-topic">
-                    <span class="node-kind">Topic</span>
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <span class="node-kind">Kafka Topic</span>
                     <strong>payment-topic</strong>
                     <small>result event</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-topic inventory-topic" data-node="inventory-topic">
-                    <span class="node-kind">Topic</span>
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <span class="node-kind">Kafka Topic</span>
                     <strong>inventory-topic</strong>
                     <small>result event</small>
+                    <div class="node-glow"></div>
                 </div>
+
+                <!-- Row 3: Notification -->
                 <div class="node node-notify" data-node="notification-service">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                    </div>
                     <span class="node-kind">Service</span>
                     <strong>Notification</strong>
                     <small>simulated send</small>
+                    <div class="node-glow"></div>
                 </div>
+
+                <!-- Row 4: Log pipeline -->
                 <div class="node node-topic logs-topic" data-node="logs-topic">
-                    <span class="node-kind">Topic</span>
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    </div>
+                    <span class="node-kind">Kafka Topic</span>
                     <strong>logs-topic</strong>
                     <small>INFO / ERROR</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-log" data-node="log-processor">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    </div>
                     <span class="node-kind">Service</span>
                     <strong>Log Processor</strong>
                     <small>ERROR filter + retry</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div class="node node-db" data-node="mysql">
+                    <div class="node-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                    </div>
                     <span class="node-kind">MySQL</span>
                     <strong>error_logs</strong>
                     <small>critical logs</small>
+                    <div class="node-glow"></div>
                 </div>
+
                 <div id="packetLayer" class="packet-layer" aria-hidden="true"></div>
+            </div>
+
+            <div class="flow-legend">
+                <div class="legend-item"><span class="legend-dot success"></span>Success</div>
+                <div class="legend-item"><span class="legend-dot warn"></span>Log Event</div>
+                <div class="legend-item"><span class="legend-dot error"></span>Error</div>
+                <div class="legend-item"><span class="legend-dot info"></span>Data Flow</div>
             </div>
         </section>
 
         <aside class="side-panel">
-            <section class="tool-section">
+            <section class="tool-section" id="createOrderSection">
                 <div class="section-title">
-                    <h2>Create Order</h2>
-                    <span id="submitState">Ready</span>
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/></svg>
+                        Create Order
+                    </h2>
+                    <span class="status-badge" id="submitState">Ready</span>
                 </div>
                 <form id="orderForm" class="order-form">
-                    <label>
+                    <label for="sku">
                         SKU
                         <select id="sku">
-                            <option value="BOOK">BOOK</option>
-                            <option value="PHONE">PHONE</option>
-                            <option value="LAPTOP">LAPTOP</option>
-                            <option value="UNKNOWN">UNKNOWN</option>
+                            <option value="BOOK">📚 BOOK</option>
+                            <option value="PHONE">📱 PHONE</option>
+                            <option value="LAPTOP">💻 LAPTOP</option>
+                            <option value="UNKNOWN">❓ UNKNOWN (triggers error)</option>
                         </select>
                     </label>
-                    <label>
-                        Quantity
-                        <input id="quantity" type="number" min="1" max="20" value="1">
-                    </label>
-                    <label>
-                        Amount
-                        <input id="amount" type="number" min="0" step="0.01" value="499.00">
-                    </label>
-                    <button class="primary-button" type="submit">Create Order</button>
+                    <div class="form-row">
+                        <label for="quantity">
+                            Quantity
+                            <input id="quantity" type="number" min="1" max="20" value="1">
+                        </label>
+                        <label for="amount">
+                            Amount (USD)
+                            <input id="amount" type="number" min="0" step="0.01" value="499.00">
+                        </label>
+                    </div>
+                    <button class="primary-button" type="submit" id="submitBtn">
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"/></svg>
+                        Create Order
+                    </button>
                 </form>
             </section>
 
-            <section class="tool-section">
+            <section class="tool-section" id="ordersSection">
                 <div class="section-title">
-                    <h2>Orders</h2>
-                    <span id="orderCount">0</span>
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+                        Orders
+                    </h2>
+                    <span class="counter-badge" id="orderCount">0</span>
                 </div>
                 <div class="order-list" id="orderList"></div>
             </section>
 
-            <section class="tool-section">
+            <section class="tool-section" id="eventSection">
                 <div class="section-title">
-                    <h2>Event Feed</h2>
-                    <button class="text-button" id="clearFeed" type="button">Clear</button>
+                    <h2>
+                        <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd"/></svg>
+                        Event Feed
+                    </h2>
+                    <button class="ghost-button small" id="clearFeed" type="button">Clear</button>
                 </div>
                 <div class="event-feed" id="eventFeed"></div>
             </section>
         </aside>
     </section>
+
+    <footer class="app-footer">
+        <p>KafkaFlow Engine &mdash; Event-Driven Microservices Demo</p>
+    </footer>
 </main>
 <script src="/app.js"></script>
 </body>
